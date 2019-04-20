@@ -1,0 +1,24 @@
+{
+  "name": "nodejschat",
+  "version": "1.0.0",
+  "description": "Real time chat app with nodejs, express and socketio",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "keywords": [
+    "realtime",
+    "chat",
+    "app",
+    "nodejs",
+    "express",
+    "socketio"
+  ],
+  "author": "Md Jewel Rana",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.16.4",
+    "socket.io": "^2.2.0"
+  }
+}
