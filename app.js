@@ -25,16 +25,21 @@ io.sockets.on('connection', (socket) => {
             socket.nickname = nickname;
             nicknames.push(socket.nickname);
             updateNickenames();
+            //new user join
+            io.sockets.emit("user join", socket.nickname);
         }
     });
     socket.on('send message', (data) => {
-        io.sockets.emit('new message', data);
+        console.log(socket.id);
+        io.sockets.emit('new message', { name: socket.nickname, msg: data.msg });
     });
 
     socket.on('disconnect', (data) => {
         if (!socket.nickname) return;
         //remove nickname of disconnected user
         nicknames.splice(nicknames.indexOf(socket.nickname), 1);
+
+        io.sockets.emit('user left', socket.nickname);
         updateNickenames();
     });
 });

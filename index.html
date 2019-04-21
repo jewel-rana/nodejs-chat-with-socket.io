@@ -56,7 +56,7 @@
 
                 $messageForm.submit((e) => {
                     e.preventDefault();
-                    socket.emit('send message', $messageBox.val());
+                    socket.emit('send message', { name: socket.nickname, msg: $messageBox.val() });
                     $messageBox.val('');
 
                     return false;
@@ -79,16 +79,24 @@
                 })
 
                 socket.on('new message', (data) => {
-                    $messages.append(data + "<br>");
+                    $messages.append("<b>" + data.name + "</b> : " + data.msg + "<br>");
                 });
 
-                socket.on('users', (usernames) => {
+                socket.on('users', (nicknames) => {
                     var html = '';
-                    for( var i = 0; i < usernames.length; i++) {
-                        html += usernames[i] + "<br>";
+                    for( var i = 0; i < nicknames.length; i++) {
+                        html += nicknames[i] + "<br>";
                     }
 
                     $users.html( html );
+                });
+
+                socket.on('user join', (nickname) => {
+                    $messages.append("<b>" + nickname + "</b> join the conversation.<br>");
+                });
+
+                socket.on('user left', (nickname) => {
+                    $messages.append("<b>" + nickname + "</b> has left the conversation.<br>");
                 });
             });
         </script>
