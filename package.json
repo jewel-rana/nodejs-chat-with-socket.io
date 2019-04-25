@@ -19,8 +19,10 @@
   "license": "MIT",
   "dependencies": {
     "express": "^4.16.4",
+    "joi": "^14.3.1",
     "mongoose": "^5.5.3",
     "mysql": "^2.17.1",
+    "node-static": "^0.7.11",
     "socket.io": "^2.2.0"
   }
 }

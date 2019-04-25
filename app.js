@@ -1,12 +1,14 @@
+const Joi = require("joi");
 const express = require('express');
-
+var http = require("http");
 const app = express();
 const server = require('http').createServer(app);
 const io = require('socket.io').listen(server);
 const mongoose = require('mongoose');
+app.use(express.static("assets"));
 const nicknames = {};
 
-//PORT
+//PORT 
 const port = process.env.PORT || 4000;
 const hostname = 'chat.rajtika.com';
 
@@ -27,14 +29,24 @@ con.connect(function(err) {
   console.log('Connected to the MySQL server.');
 });
 
-
-
 server.listen(port, () => {
     console.log('Server Running on port 4000');
 });
 
 app.get('/', (req, res) => {
     res.sendFile(__dirname + '/index.html');
+});
+
+app.post('/login', (req, res) => {
+
+    res.writeHead(301,
+        { Location: 'http://localhost:4000/chat' }
+    );
+    res.end();
+});
+
+app.get('/chat', (req, res) => {
+    res.sendFile(__dirname + "/chat.html");
 });
 
 io.sockets.on('connection', (socket) => {
@@ -85,4 +97,16 @@ io.sockets.on('connection', (socket) => {
 
 function updateNickenames() {
     io.sockets.emit("users", Object.keys(nicknames));
+}
+
+function validate(data) {
+    const schema = {
+        name: Joi.string()
+            .min(6)
+            .required()
+    };
+    const result = Joi.validate(data, schema);
+    // console.log(result);
+    if (result.error)
+        return result.error.details[0].message;
 }
