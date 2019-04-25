@@ -10,21 +10,24 @@ const nicknames = {};
 const port = process.env.PORT || 4000;
 const hostname = 'chat.rajtika.com';
 
-//connect to mongodb
-mongoose.connect('mongodb://localhost:27017/chat', { useNewUrlParser: true });
-var db = mongoose.connection;
-db.on('error', console.error.bind(console, 'connection error:'));
-db.once('open', function () {
-    console.log('MongoDB Connected');
+const mysql = require('mysql');
+
+const con = mysql.createConnection({
+    host: 'localhost',
+    user: 'root',
+    password: '123456',
+    database: 'nodechat'
 });
 
-const chatSchema = mongoose.Schema({
-    nickname: String,
-    message: String,
-    created: { type: Date, default: Date.now }
+con.connect(function(err) {
+  if (err) {
+    console.log('error: ' + err.message);
+  }
+ 
+  console.log('Connected to the MySQL server.');
 });
 
-const Chat = mongoose.model('Message', chatSchema);
+
 
 server.listen(port, () => {
     console.log('Server Running on port 4000');
@@ -35,12 +38,11 @@ app.get('/', (req, res) => {
 });
 
 io.sockets.on('connection', (socket) => {
-    //load old message
-    Chat.remove({});
-    const query = Chat.find({});
-    query.sort('-created').limit(8).exec((err, data) => {
-        if (err) throw err;
-        socket.emit('old messages', data);
+
+    //get all old messages
+    con.query('INSERT INTO employees SET ?', message, (err, rows) => {
+        console.log('data inserted.');
+        io.sockets.emit('old message', {name: socket.nickname, msg: rows});
     });
 
     //add users
@@ -58,12 +60,11 @@ io.sockets.on('connection', (socket) => {
     });
 
     socket.on('send message', (data) => {
-        console.log(socket.id);
+        var message = {sender_id: 1, message: data}
         //save to database
-        var newMsg = new Chat({ nickname: socket.nickname, message: data.msg });
-        newMsg.save((err) => {
-            if (err) throw err;
-            io.sockets.emit('new message', { name: socket.nickname, msg: data.msg });
+        con.query('INSERT INTO employees SET ?', message, (err, rows) => {
+            console.log('data inserted.');
+            io.sockets.emit('new message', {name: socket.nickname, msg: data.msg});
         });
     });
 
