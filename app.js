@@ -38,12 +38,16 @@ app.get('/', (req, res) => {
 });
 
 io.sockets.on('connection', (socket) => {
-
+    let message = {sender_id: 1, message: 'test'}
     //get all old messages
-    con.query('INSERT INTO employees SET ?', message, (err, rows) => {
-        console.log('data inserted.');
-        io.sockets.emit('old message', {name: socket.nickname, msg: rows});
-    });
+    con.query(
+      "SELECT messages.message, users.name FROM messages LEFT JOIN users ON messages.sender_id=users.id ORDER BY messages.id desc LIMIT 8",
+      (err, rows) => {
+        let data = rows;
+        // console.log(data);
+        socket.emit("old messages", data);
+      }
+    );
 
     //add users
     socket.on('new user', (nickname, callback) => {
@@ -60,9 +64,9 @@ io.sockets.on('connection', (socket) => {
     });
 
     socket.on('send message', (data) => {
-        var message = {sender_id: 1, message: data}
+        var message = {sender_id: 1, message: data.msg}
         //save to database
-        con.query('INSERT INTO employees SET ?', message, (err, rows) => {
+        con.query('INSERT INTO messages SET ?', message, (err, rows) => {
             console.log('data inserted.');
             io.sockets.emit('new message', {name: socket.nickname, msg: data.msg});
         });
