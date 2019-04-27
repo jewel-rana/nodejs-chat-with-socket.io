@@ -1,16 +1,33 @@
-const Joi = require("joi");
+//Express
 const express = require('express');
-var http = require("http");
 const app = express();
-const server = require('http').createServer(app);
-const io = require('socket.io').listen(server);
-const mongoose = require('mongoose');
-app.use(express.static("assets"));
-const nicknames = {};
-
-//PORT 
+const server = require("http").createServer(app);
+const io = require("socket.io").listen(server); //PORT
 const port = process.env.PORT || 4000;
-const hostname = 'chat.rajtika.com';
+// const hostname = "chat.rajtika.com";
+server.listen(port, () => {
+  console.log("Server Running on port " + port);
+});
+
+//modules
+const Joi = require("joi");
+const bodyParser = require("body-parser");
+const path = require("path");
+
+//configure Express
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname + "/views"));
+
+//middlewares
+app.use(express.static("assets", ["js", "css", "png", "jpg", "gif"]));
+app.use(express.static("views", ["ejs"]));
+app.use(express.static('bower_components', ['js', 'css']));
+app.use(bodyParser.urlencoded({
+    extended: true
+}));
+
+//data storage
+const nicknames = {};
 
 const mysql = require('mysql');
 
@@ -29,25 +46,10 @@ con.connect(function(err) {
   console.log('Connected to the MySQL server.');
 });
 
-server.listen(port, () => {
-    console.log('Server Running on port 4000');
-});
-
-app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/index.html');
-});
-
-app.post('/login', (req, res) => {
-
-    res.writeHead(301,
-        { Location: 'http://localhost:4000/chat' }
-    );
-    res.end();
-});
-
-app.get('/chat', (req, res) => {
-    res.sendFile(__dirname + "/chat.html");
-});
+//routes
+const webRoutes = require('./routes/web')(app, express);
+// app.use('/api', require('./routes/api'));
+app.use(webRoutes);
 
 io.sockets.on('connection', (socket) => {
     let message = {sender_id: 1, message: 'test'}
