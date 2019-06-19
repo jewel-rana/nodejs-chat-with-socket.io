@@ -27,15 +27,16 @@ app.use(bodyParser.urlencoded({
 }));
 
 //data storage
-const nicknames = {};
+const nicknames = [];
+const oUsers = [];
 
 const mysql = require('mysql');
 
 const con = mysql.createConnection({
     host: 'localhost',
-    user: 'root',
+    user: 'admin',
     password: '123456',
-    database: 'nodechat'
+    database: 'mmcm'
 });
 
 con.connect(function(err) {
@@ -47,9 +48,9 @@ con.connect(function(err) {
 });
 
 //routes
-const webRoutes = require('./routes/web')(app, express);
+// const webRoutes = require('./routes/web')(app, express);
 // app.use('/api', require('./routes/api'));
-app.use(webRoutes);
+// app.use(webRoutes);
 
 io.sockets.on('connection', (socket) => {
     let message = {sender_id: 1, message: 'test'}
@@ -58,19 +59,19 @@ io.sockets.on('connection', (socket) => {
       "SELECT messages.message, users.name FROM messages LEFT JOIN users ON messages.sender_id=users.id ORDER BY messages.id desc LIMIT 8",
       (err, rows) => {
         let data = rows;
-        // console.log(data);
         socket.emit("old messages", data);
       }
     );
 
     //add users
-    socket.on('new user', (nickname, callback) => {
-        if (nickname in nicknames) {
-            callback(false);
+    socket.on('new user', (data, callback) => {
+        if (nicknames.indexOf(data.id)) {
+            callback(true);
         } else {
             callback(true);
-            socket.nickname = nickname;
-            nicknames[socket.nickname] = socket;
+            socket.user_id = data.id;
+            socket.nickname = data.name;
+            nicknames.push({name: socket.nickname, user_id: socket.user_id, socket: socket});
             updateNickenames();
             //new user join
             io.sockets.emit("user join", socket.nickname);
@@ -87,18 +88,24 @@ io.sockets.on('connection', (socket) => {
     });
 
     socket.on('disconnect', (data) => {
-        if (!socket.nickname) return;
+        if (!socket.user_id) return;
         //remove nickname of disconnected user
         // nicknames.delete(nicknames[socket.nickname]);
-        delete nicknames[socket.nickname];
+        // delete nicknames[socket.nickname];
+        let ar = nicknames.indexOf(socket.user_id);
+        nicknames.splice(ar);
 
-        io.sockets.emit('user left', socket.nickname);
+        io.sockets.emit('user left', { name: socket.nickname, id: socket.user_id });
         updateNickenames();
     });
 });
 
 function updateNickenames() {
-    io.sockets.emit("users", Object.keys(nicknames));
+    for( var i = 0; i < nicknames.length; i++ ) {
+        oUsers.push( {name: nicknames[i].name, socket_id: nicknames[i].socket.id, user_id: nicknames[i].user_id } );
+    }
+    console.log(oUsers);
+    io.sockets.emit('users', oUsers);
 }
 
 function validate(data) {
@@ -112,3 +119,15 @@ function validate(data) {
     if (result.error)
         return result.error.details[0].message;
 }
+
+// function userExist( user_id ){ //q, VARIABLE FROM THE INPUT FIELD
+//   var k = false;
+
+//    //LOOPS THRU THE ARRAY TO CHECK IF THE KEY EXISTS
+//   for(i=0; i<nicknames.length; i++){
+//     if(q==nick[i]){
+//       k = "true";
+//     }
+//   }
+//   $("#k").html(k); //SHOWS EITHER "TRUE" OF "FALSE"
+// }
