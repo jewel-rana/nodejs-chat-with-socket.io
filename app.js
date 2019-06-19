@@ -65,17 +65,25 @@ io.sockets.on('connection', (socket) => {
 
     //add users
     socket.on('new user', (data, callback) => {
-        if (nicknames.indexOf(data.id)) {
-            callback(true);
+        console.log( nicknames );
+        let userHas = false;
+        for( var i = 0; i < nicknames.length; i++ ) {
+            if( nicknames[i].user_id == data.id )
+                userHas = true;
+        }
+        if (userHas == true ) {
+            socket.user_id = data.id;
+            socket.nickname = data.name;
         } else {
-            callback(true);
             socket.user_id = data.id;
             socket.nickname = data.name;
             nicknames.push({name: socket.nickname, user_id: socket.user_id, socket: socket});
-            updateNickenames();
             //new user join
             io.sockets.emit("user join", socket.nickname);
         }
+
+        updateNickenames();
+        callback(true);
     });
 
     socket.on('send message', (data) => {
@@ -88,12 +96,16 @@ io.sockets.on('connection', (socket) => {
     });
 
     socket.on('disconnect', (data) => {
-        if (!socket.user_id) return;
+        console.log( socket.user_id );
+        if (!socket.nickname) return;
         //remove nickname of disconnected user
         // nicknames.delete(nicknames[socket.nickname]);
         // delete nicknames[socket.nickname];
-        let ar = nicknames.indexOf(socket.user_id);
-        nicknames.splice(ar);
+        for( let i = 0; i < nicknames.length; i++ ) {
+            if( nicknames[i].user_id == socket.user_id){
+                nicknames.splice(nicknames[i]);
+            }
+        }
 
         io.sockets.emit('user left', { name: socket.nickname, id: socket.user_id });
         updateNickenames();
