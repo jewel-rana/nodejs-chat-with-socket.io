@@ -53,57 +53,71 @@ con.connect(function(err) {
 // app.use(webRoutes);
 
 io.sockets.on('connection', (socket) => {
-    let message = {sender_id: 1, message: 'test'}
-    //get all old messages
-    con.query(
-      "SELECT messages.message, users.name FROM messages LEFT JOIN users ON messages.sender_id=users.id ORDER BY messages.id desc LIMIT 8",
-      (err, rows) => {
-        let data = rows;
-        socket.emit("old messages", data);
-      }
-    );
+    // console.log(io.sockets.sockets);
 
     //add users
     socket.on('new user', (data, callback) => {
-        console.log( nicknames );
+        // console.log(data);
         let userHas = false;
-        for( var i = 0; i < nicknames.length; i++ ) {
-            if( nicknames[i].user_id == data.id )
-                userHas = true;
+        if( nicknames.length > 0 ) {
+
+            for( var i = 0; i < nicknames.length; i++ ) {
+                if( nicknames[i].user_id == data.id )
+                    userHas = true;
+            }
         }
-        if (userHas == true ) {
+
+        if (userHas == true) {
             socket.user_id = data.id;
             socket.nickname = data.name;
+            callback(false);
         } else {
             socket.user_id = data.id;
             socket.nickname = data.name;
             nicknames.push({name: socket.nickname, user_id: socket.user_id, socket: socket});
             //new user join
             io.sockets.emit("user join", socket.nickname);
+            callback(true);
         }
 
         updateNickenames();
-        callback(true);
     });
 
     socket.on('send message', (data) => {
-        var message = {sender_id: 1, message: data.msg}
+        var message = {user_id: socket.user_id, message: data.msg, receiver_id: data.receiver}
         //save to database
-        con.query('INSERT INTO messages SET ?', message, (err, rows) => {
-            console.log('data inserted.');
-            io.sockets.emit('new message', {name: socket.nickname, msg: data.msg});
+        con.query('INSERT INTO mmcm_chats SET ?', message, (err, rows) => {
+            if(err == null ){
+                console.log('new message sent');
+                io.sockets.emit('new message', {name: socket.nickname, msg: data.msg, id: message.receiver_id, socket_id: socket.id});
+            } else {
+                console.log('new message sent err');
+                socket.emit('new message err', 'Sorry! message cannot be sent.');
+            }
+        });
+    });
+
+    socket.on('get old messages', (data) => {
+        console.log(data);
+        let receiver_id = socket.user_id;
+        let sender_id = data.id;
+        con.query(
+      "SELECT mmcm_chats.message, users.name FROM mmcm_chats LEFT JOIN users ON mmcm_chats.sender_id=users.id WHERE mmcm_chats.receiver_id=" + receiver_id + " AND mmcm_chats.user_id="+ sender_id +" ORDER BY mmcm_chats.id desc LIMIT 8",
+      (err, rows) => {
+        console.log( err );
+            let data = rows;
+            socket.emit("old messages", data);
         });
     });
 
     socket.on('disconnect', (data) => {
-        console.log( socket.user_id );
-        if (!socket.nickname) return;
+        // if (!socket.user_id) return;
         //remove nickname of disconnected user
         // nicknames.delete(nicknames[socket.nickname]);
         // delete nicknames[socket.nickname];
         for( let i = 0; i < nicknames.length; i++ ) {
             if( nicknames[i].user_id == socket.user_id){
-                nicknames.splice(nicknames[i]);
+                nicknames.splice(i, 1);
             }
         }
 
@@ -116,7 +130,7 @@ function updateNickenames() {
     for( var i = 0; i < nicknames.length; i++ ) {
         oUsers.push( {name: nicknames[i].name, socket_id: nicknames[i].socket.id, user_id: nicknames[i].user_id } );
     }
-    console.log(oUsers);
+    // console.log(oUsers);
     io.sockets.emit('users', oUsers);
 }
 
