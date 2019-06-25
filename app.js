@@ -57,24 +57,29 @@ io.sockets.on('connection', (socket) => {
 
     //add users
     socket.on('new user', (data, callback) => {
-        // console.log(data);
-        let userHas = false;
-        if( nicknames.length > 0 ) {
-
+        console.log(nicknames.length);
+        var userHas = false;
+        if( nicknames.length > 0 && typeof nicknames !='undefined' ) {
             for( var i = 0; i < nicknames.length; i++ ) {
-                if( nicknames[i].user_id == data.id )
+                if( parseInt( nicknames[i].id ) === parseInt(data.id) ){
+                    console.log('testing');
                     userHas = true;
+                }
             }
         }
 
+        console.log(userHas);
+
         if (userHas == true) {
-            socket.user_id = data.id;
-            socket.nickname = data.name;
+            console.log('User already exist' + userHas);
+            // socket.user_id = data.id;
+            // socket.nickname = data.name;
             callback(false);
         } else {
             socket.user_id = data.id;
             socket.nickname = data.name;
-            nicknames.push({name: socket.nickname, user_id: socket.user_id, socket: socket});
+            nicknames.push({name: socket.nickname, id: data.id, socket: socket});
+
             //new user join
             io.sockets.emit("user join", socket.nickname);
             callback(true);
@@ -98,13 +103,14 @@ io.sockets.on('connection', (socket) => {
     });
 
     socket.on('get old messages', (data) => {
-        console.log(data);
         let receiver_id = socket.user_id;
         let sender_id = data.id;
+
+        // console.log('Receiver ID : ' + receiver_id + 'Sender : ' + sender_id);
         con.query(
-      "SELECT mmcm_chats.message, users.name FROM mmcm_chats LEFT JOIN users ON mmcm_chats.sender_id=users.id WHERE mmcm_chats.receiver_id=" + receiver_id + " AND mmcm_chats.user_id="+ sender_id +" ORDER BY mmcm_chats.id desc LIMIT 8",
+      "SELECT mmcm_chats.message, mmcm_chats.sending_at, S.username as sender_name, R.username as receiver_name FROM mmcm_chats LEFT JOIN users as S ON mmcm_chats.user_id=S.id LEFT JOIN users R ON mmcm_chats.receiver_id=R.id WHERE mmcm_chats.receiver_id=" + receiver_id + " AND mmcm_chats.user_id="+ sender_id +" ORDER BY mmcm_chats.id desc LIMIT 8",
       (err, rows) => {
-        console.log( err );
+        // console.log( rows );
             let data = rows;
             socket.emit("old messages", data);
         });
@@ -127,8 +133,9 @@ io.sockets.on('connection', (socket) => {
 });
 
 function updateNickenames() {
+    const oUsers = [];
     for( var i = 0; i < nicknames.length; i++ ) {
-        oUsers.push( {name: nicknames[i].name, socket_id: nicknames[i].socket.id, user_id: nicknames[i].user_id } );
+        oUsers.push( {name: nicknames[i].name, socket_id: nicknames[i].socket.id, user_id: nicknames[i].id } );
     }
     // console.log(oUsers);
     io.sockets.emit('users', oUsers);
