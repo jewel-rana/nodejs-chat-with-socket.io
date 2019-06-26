@@ -72,8 +72,8 @@ io.sockets.on('connection', (socket) => {
 
         if (userHas == true) {
             console.log('User already exist' + userHas);
-            // socket.user_id = data.id;
-            // socket.nickname = data.name;
+            socket.user_id = data.id;
+            socket.nickname = data.name;
             callback(false);
         } else {
             socket.user_id = data.id;
@@ -97,7 +97,7 @@ io.sockets.on('connection', (socket) => {
                 io.sockets.emit('new message', {name: socket.nickname, msg: data.msg, id: message.user_id, receiver: message.receiver_id, socket_id: socket.id});
             } else {
                 console.log('new message sent err' + err);
-                socket.emit('new message err', 'Sorry! message cannot be sent.');
+                socket.emit('bug reporting', err);
             }
         });
     });
@@ -111,8 +111,12 @@ io.sockets.on('connection', (socket) => {
       "SELECT mmcm_chats.message, mmcm_chats.sending_at, S.username as sender_name, R.username as receiver_name FROM mmcm_chats LEFT JOIN users as S ON mmcm_chats.user_id=S.id LEFT JOIN users R ON mmcm_chats.receiver_id=R.id WHERE mmcm_chats.receiver_id=" + receiver_id + " AND mmcm_chats.user_id="+ sender_id +" OR ( mmcm_chats.receiver_id="+sender_id+" AND mmcm_chats.user_id="+receiver_id+") ORDER BY mmcm_chats.id desc LIMIT 8",
       (err, rows) => {
         console.log( rows );
-            let data = rows;
-            socket.emit("old messages", data);
+            if( err == null ) {
+                let data = rows;
+                socket.emit("old messages", data);
+            } else {
+                socket.emit('bug reporting', err);
+            }
         });
     });
 
